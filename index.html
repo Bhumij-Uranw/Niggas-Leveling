@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XP Quest Tracker - Multiplayer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen" class="loading-screen">
+  <h1>Loading XP Quest...</h1>
+</div>
+
+<header class="app-header">
+  <h1>XP Quest Tracker</h1>
+  <div class="spacer"></div>
+  <button id="addStudentBtn" class="btn primary">+ Add Student</button>
+</header>
+
+<!-- STUDENTS LIST VIEW -->
+<main id="studentsView" class="view active">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Level</th>
+        <th>XP</th>
+        <th>XP Needed</th>
+        <th>Open</th>
+        <th>Delete</th>
+      </tr>
+    </thead>
+    <tbody id="studentsTbody"></tbody>
+  </table>
+
+  <!-- CHAT SYSTEM -->
+  <section class="chat-panel">
+    <h2>Chat</h2>
+    <div id="chatBox" class="chat-box"></div>
+    <input id="chatInput" type="text" placeholder="Type a message..." />
+    <button id="sendChatBtn" class="btn primary">Send</button>
+  </section>
+</main>
+
+<!-- STUDENT DETAIL / TASKS VIEW -->
+<main id="studentView" class="view">
+  <div class="student-header">
+    <button id="backBtn" class="btn">← Back</button>
+    <input id="studentNameInput" class="name-input" />
+    <div class="stats">
+      <span id="levelBadge" class="badge">Lv 1</span>
+      <span id="xpNow" class="muted">0 XP</span>
+      <span id="xpNext" class="muted">/ 100 to next</span>
+    </div>
+  </div>
+
+  <div class="progress-wrapper">
+    <div id="xpBar" class="progress-bar"><div id="xpBarFill" class="fill"></div></div>
+  </div>
+
+  <section class="task-panel">
+    <div class="task-panel-title">
+      <h2>Tasks <small class="muted">(The task name should be descriptive)</small></h2>
+    </div>
+
+    <div class="task-add">
+      <input id="taskName" type="text" placeholder="Task name" />
+      <input id="taskXP" type="number" min="1" placeholder="XP" />
+      <button id="addTaskBtn" class="btn primary">Add Task</button>
+    </div>
+
+    <div id="taskList" class="task-list"></div>
+  </section>
+</main>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAmb2jCnYlyUinXsQtEoY7GmuJ1vgEHuqE",
+  authDomain: "xp-ngleveling.firebaseapp.com",
+  projectId: "xp-ngleveling",
+  storageBucket: "xp-ngleveling.firebasestorage.app",
+  messagingSenderId: "1095060275934",
+  appId: "1:1095060275934:web:525b8458ab7a5a315db84f",
+  measurementId: "G-NEG9JN8GWS"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
+
+<script src="script.js"></script>
+</body>
+</html>
