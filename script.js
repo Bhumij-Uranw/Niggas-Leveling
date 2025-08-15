@@ -18,7 +18,7 @@ function calcLevel(totalXP){
   while(left>=req){
     left-=req;
     level++;
-    if(level<2) req=100;
+    if(level<=1) req=100;
     else if(level<10) req=200;
     else req=300;
   }
@@ -228,6 +228,7 @@ async function init(){
   }
 }
 init();
+
 
 
 
