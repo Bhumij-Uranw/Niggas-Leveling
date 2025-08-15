@@ -198,22 +198,35 @@ function renderChat(docs){
 
 /* ---------------- Init ---------------- */
 async function init(){
-  students = await loadStudents();
-  hideLoading();
+  try {
+    // Try loading students from Firestore
+    students = await loadStudents();
+  } catch(err){
+    console.error("Failed to load students:", err);
+    students = []; // fallback to empty array
+  } finally {
+    hideLoading(); // always hide loading screen
+  }
 
   renderStudentsTable();
 
-  // Realtime students
-  db.collection("students").onSnapshot(snapshot=>{
-    students = snapshot.docs.map(d=>d.data());
-    if(!activeStudentId) renderStudentsTable();
-    else{
-      const student = students.find(s=>s.id===activeStudentId);
-      if(student){ renderStudentStats(student); renderTaskList(student); }
-    }
-  });
+  try {
+    // Realtime students updates
+    db.collection("students").onSnapshot(snapshot=>{
+      students = snapshot.docs.map(d=>d.data());
+      if(!activeStudentId) renderStudentsTable();
+      else{
+        const student = students.find(s=>s.id===activeStudentId);
+        if(student){ renderStudentStats(student); renderTaskList(student); }
+      }
+    });
 
-  // Realtime chat
-  db.collection("chat").orderBy("timestamp").onSnapshot(renderChat);
+    // Realtime chat updates
+    db.collection("chat").orderBy("timestamp").onSnapshot(renderChat);
+  } catch(err){
+    console.error("Realtime Firestore failed:", err);
+  }
 }
 init();
+
+
