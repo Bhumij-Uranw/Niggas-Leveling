@@ -1,36 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Niggas Leveling 🔥💀</title>
-<link rel="shortcut icon" href="favicon.png" type="image/x-icon">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Niggas Leveling 🧠🔥</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="favicon.png" type="image/png" />
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-<!-- LOADING SCREEN -->
+<!-- Loading Screen -->
 <div id="loadingScreen" class="loading-screen">
   <h1>Loading...</h1>
 </div>
 
+<!-- Header -->
 <header class="app-header">
-  <h1>Niggas Leveling 🔥💀</h1>
+  <h1>Niggas Leveling 🧠🔥</h1>
   <div class="spacer"></div>
-  <button id="addStudentBtn" class="btn primary">+ Add Nigga</button>
+  <button id="addStudentBtn" class="btn primary">+ Add Player</button>
 </header>
 
-<!-- STUDENTS LIST VIEW -->
+<!-- Students List -->
 <main id="studentsView" class="view active">
   <table class="table">
     <thead>
       <tr>
-        <th>No.</th>
+        <th>Rank</th>
         <th>Name</th>
         <th>Level</th>
         <th>XP</th>
         <th>XP Needed</th>
-        <th>Streak</th>
+        <th>Streak 🔥</th>
         <th>Open</th>
         <th>Delete</th>
       </tr>
@@ -38,7 +42,7 @@
     <tbody id="studentsTbody"></tbody>
   </table>
 
-  <!-- CHAT SYSTEM -->
+  <!-- Chat -->
   <section class="chat-panel">
     <h2>Chat</h2>
     <div id="chatBox" class="chat-box"></div>
@@ -47,7 +51,7 @@
   </section>
 </main>
 
-<!-- STUDENT DETAIL / TASKS VIEW -->
+<!-- Student Detail View -->
 <main id="studentView" class="view">
   <div class="student-header">
     <button id="backBtn" class="btn">← Back</button>
@@ -56,7 +60,7 @@
       <span id="levelBadge" class="badge">Lv 1</span>
       <span id="xpNow" class="muted">0 XP</span>
       <span id="xpNext" class="muted">/ 100 to next</span>
-      <span id="streakBadge" class="muted">Streak: 0</span>
+      <span id="streakBadge" class="badge accent">🔥 0 Streak</span>
     </div>
   </div>
 
@@ -64,43 +68,16 @@
     <div id="xpBar" class="progress-bar"><div id="xpBarFill" class="fill"></div></div>
   </div>
 
-  <div class="checkin-row">
-    <button id="checkinBtn" class="btn">Daily Check-in</button>
-    <small class="muted">One bonus per day when you check a task or press check-in.</small>
-  </div>
-
   <section class="task-panel">
-    <div class="task-panel-title">
-      <h2>Tasks <small class="muted">(The task name should be descriptive)</small></h2>
-    </div>
-
+    <h2>Tasks</h2>
     <div class="task-add">
       <input id="taskName" type="text" placeholder="Task name" />
       <input id="taskXP" type="number" min="1" placeholder="XP" />
       <button id="addTaskBtn" class="btn primary">Add Task</button>
     </div>
-
     <div id="taskList" class="task-list"></div>
   </section>
 </main>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAmb2jCnYlyUinXsQtEoY7GmuJ1vgEHuqE",
-  authDomain: "xp-ngleveling.firebaseapp.com",
-  projectId: "xp-ngleveling",
-  storageBucket: "xp-ngleveling.firebasestorage.app",
-  messagingSenderId: "1095060275934",
-  appId: "1:1095060275934:web:525b8458ab7a5a315db84f",
-  measurementId: "G-NEG9JN8GWS"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-</script>
 
 <script src="script.js"></script>
 </body>
