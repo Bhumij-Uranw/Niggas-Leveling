@@ -11,7 +11,7 @@
 
 <!-- LOADING SCREEN -->
 <div id="loadingScreen" class="loading-screen">
-  <h1>Niggafying...</h1>
+  <h1>Loading...</h1>
 </div>
 
 <header class="app-header">
@@ -25,10 +25,12 @@
   <table class="table">
     <thead>
       <tr>
+        <th>No.</th>
         <th>Name</th>
         <th>Level</th>
         <th>XP</th>
         <th>XP Needed</th>
+        <th>Streak</th>
         <th>Open</th>
         <th>Delete</th>
       </tr>
@@ -54,11 +56,17 @@
       <span id="levelBadge" class="badge">Lv 1</span>
       <span id="xpNow" class="muted">0 XP</span>
       <span id="xpNext" class="muted">/ 100 to next</span>
+      <span id="streakBadge" class="muted">Streak: 0</span>
     </div>
   </div>
 
   <div class="progress-wrapper">
     <div id="xpBar" class="progress-bar"><div id="xpBarFill" class="fill"></div></div>
+  </div>
+
+  <div class="checkin-row">
+    <button id="checkinBtn" class="btn">Daily Check-in</button>
+    <small class="muted">One bonus per day when you check a task or press check-in.</small>
   </div>
 
   <section class="task-panel">
@@ -97,8 +105,3 @@ const db = firebase.firestore();
 <script src="script.js"></script>
 </body>
 </html>
-
-
-
-
-
