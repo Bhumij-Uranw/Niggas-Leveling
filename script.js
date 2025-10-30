@@ -1,323 +1,224 @@
-/* ---------------- Loading ---------------- */
-const loadingScreen = document.getElementById("loadingScreen");
-function hideLoading(){ loadingScreen.style.display="none"; }
+/* ---------------- Firebase ---------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyAmb2jCnYlyUinXsQtEoY7GmuJ1vgEHuqE",
+  authDomain: "xp-ngleveling.firebaseapp.com",
+  projectId: "xp-ngleveling",
+  storageBucket: "xp-ngleveling.firebasestorage.app",
+  messagingSenderId: "1095060275934",
+  appId: "1:1095060275934:web:525b8458ab7a5a315db84f"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-/* ---------------- Models ---------------- */
+/* ---------------- Globals ---------------- */
 let students = [];
 let activeStudentId = null;
 
 /* ---------------- Utilities ---------------- */
 function cryptoRandomId(){return "s_"+Math.random().toString(36).slice(2)+Date.now().toString(36);}
-function el(tag, child){const e=document.createElement(tag);if(child)e.appendChild(child);return e;}
-function text(s){return document.createTextNode(s);}
-function button(label, kind){const b=document.createElement("button");b.className="btn"+(kind?" "+kind:"");b.textContent=label;return b;}
-
-/* ---------------- XP / Level ---------------- */
 function calcLevel(totalXP){
   let level=1, req=100, left=totalXP;
-  while(left>=req){
-    left-=req;
-    level++;
-    if(level<=1) req=100;
-    else if(level<10) req=200;
-    else req=300;
-  }
+  while(left>=req){left-=req;level++;req+=50;}
   return { level, currentXP:left, xpNeeded:req };
 }
+function todayStr(){ return new Date().toDateString(); }
 
-/* ---------------- DOM ---------------- */
+/* ---------------- DOM Elements ---------------- */
+const loadingScreen = document.getElementById("loadingScreen");
 const studentsView = document.getElementById("studentsView");
 const studentView  = document.getElementById("studentView");
 const studentsTbody = document.getElementById("studentsTbody");
-const addStudentBtn = document.getElementById("addStudentBtn");
-const backBtn       = document.getElementById("backBtn");
 
+const addStudentBtn = document.getElementById("addStudentBtn");
+const backBtn = document.getElementById("backBtn");
 const studentNameInput = document.getElementById("studentNameInput");
-const levelBadge       = document.getElementById("levelBadge");
-const xpNow            = document.getElementById("xpNow");
-const xpNext           = document.getElementById("xpNext");
-const xpBarFill        = document.getElementById("xpBarFill");
-const streakBadge      = document.getElementById("streakBadge");
+const levelBadge = document.getElementById("levelBadge");
+const xpNow = document.getElementById("xpNow");
+const xpNext = document.getElementById("xpNext");
+const streakBadge = document.getElementById("streakBadge");
+const xpBarFill = document.getElementById("xpBarFill");
 
 const taskNameInput = document.getElementById("taskName");
 const taskXPInput   = document.getElementById("taskXP");
 const addTaskBtn    = document.getElementById("addTaskBtn");
 const taskListEl    = document.getElementById("taskList");
 
-const checkinBtn    = document.getElementById("checkinBtn");
+const chatBox = document.getElementById("chatBox");
+const chatInput = document.getElementById("chatInput");
+const sendChatBtn = document.getElementById("sendChatBtn");
 
-/* ---------------- CHAT DOM ---------------- */
-const chatBox      = document.getElementById("chatBox");
-const chatInput    = document.getElementById("chatInput");
-const sendChatBtn  = document.getElementById("sendChatBtn");
-
-/* ---------------- Firestore ---------------- */
-const db = firebase.firestore();
-
-/* daily bonus XP for checking in once per day */
-const DAILY_BONUS_XP = 10;
-
-/* ---------------- Firebase Functions ---------------- */
-async function loadStudents(){
-  const snapshot = await db.collection("students").get();
-  let studentsArr = snapshot.docs.map(doc=>doc.data());
-  if(studentsArr.length === 0){
-    const defaults = [
-      makeStudent("Player 1"),
-      makeStudent("Player 2"),
-      makeStudent("Player 3"),
-      makeStudent("Player 4")
-    ];
-    for(const s of defaults) await db.collection("students").doc(s.id).set(s);
-    studentsArr = defaults;
-  }
-  return studentsArr;
-}
-
-function makeStudent(name){
-  return {
-    id: cryptoRandomId(),
-    name,
-    totalXP:0,
-    tasks:[],
-    streak:0,
-    lastCheckin:0 // timestamp
-  };
+/* ---------------- Models ---------------- */
+function makeStudent(name){ 
+  return { 
+    id: cryptoRandomId(), 
+    name, 
+    totalXP:0, 
+    tasks:[], 
+    streak:0, 
+    lastActive:null 
+  }; 
 }
 async function saveStudent(student){ await db.collection("students").doc(student.id).set(student); }
-async function deleteStudent(student){ await db.collection("students").doc(student.id).delete(); }
-
-/* ---------------- Date helpers ---------------- */
-function isSameDay(tsA, tsB){
-  if(!tsA || !tsB) return false;
-  const a = new Date(tsA);
-  const b = new Date(tsB);
-  return a.getFullYear() === b.getFullYear() &&
-         a.getMonth() === b.getMonth() &&
-         a.getDate() === b.getDate();
-}
-function yesterdayTimestamp(ts){
-  const d = new Date(ts);
-  d.setDate(d.getDate() - 1);
-  return d.getTime();
-}
 
 /* ---------------- Render ---------------- */
 function renderStudentsTable(){
   studentsTbody.innerHTML="";
-
-  // Sort students by totalXP desc (ranking)
-  const ranked = [...students].sort((a,b)=> b.totalXP - a.totalXP || (b.name.localeCompare(a.name)));
-
-  ranked.forEach((s, idx)=>{
+  // Sort by level and XP
+  students.sort((a,b)=>b.totalXP - a.totalXP);
+  students.forEach((s,i)=>{
     const { level, currentXP, xpNeeded } = calcLevel(s.totalXP);
     const tr = document.createElement("tr");
-
-    const noTd = el("td", text(idx+1 + (idx===0 ? " 👑" : "")));
-    const nameTd = document.createElement("td");
-    const nameInput = document.createElement("input");
-    nameInput.className="name-inline";
-    nameInput.value = s.name;
-    nameInput.onchange=async ()=>{
-      s.name=nameInput.value.trim()||"Untitled";
-      await saveStudent(s);
-      await refreshAll(); // re-render leaderboard in case of tie/name
-    };
-    nameTd.appendChild(nameInput);
-
-    const levelTd = el("td", text(`Lv ${level}`));
-    const xpTd    = el("td", text(`${currentXP}`));
-    const needTd  = el("td", text(`${xpNeeded}`));
-    const streakTd = el("td", text(s.streak || 0));
-
-    const openTd = el("td", button("Open","primary"));
-    openTd.firstChild.onclick=()=>{ openStudentView(s.id); };
-
-    const deleteTd = el("td", button("Delete","danger"));
-    deleteTd.firstChild.onclick=async ()=>{
-      if(confirm(`Delete ${s.name}?`)){
-        await deleteStudent(s);
-        students = students.filter(st=>st.id!==s.id);
-        renderStudentsTable();
-      }
-    };
-
-    tr.append(noTd, nameTd, levelTd, xpTd, needTd, streakTd, openTd, deleteTd);
+    const rankTd = document.createElement("td");
+    rankTd.innerHTML = `${i+1}${i===0?' 👑':''}`;
+    tr.innerHTML = `
+      <td>${rankTd.innerHTML}</td>
+      <td><input class="name-inline" value="${s.name}" onchange="updateName('${s.id}', this.value)" /></td>
+      <td>Lv ${level}</td>
+      <td>${currentXP}</td>
+      <td>${xpNeeded}</td>
+      <td>${s.streak || 0}</td>
+      <td><button class="btn primary" onclick="openStudentView('${s.id}')">Open</button></td>
+      <td><button class="btn danger" onclick="deleteStudent('${s.id}')">Delete</button></td>
+    `;
     studentsTbody.appendChild(tr);
   });
 }
 
 function renderStudentStats(student){
   const { level, currentXP, xpNeeded } = calcLevel(student.totalXP);
-  levelBadge.textContent=`Lv ${level}`;
-  xpNow.textContent=`${currentXP} XP`;
-  xpNext.textContent=`/ ${xpNeeded} to next`;
-  xpBarFill.style.width=`${Math.min(100,(currentXP/xpNeeded*100))}%`;
-  streakBadge.textContent = `Streak: ${student.streak || 0}`;
+  levelBadge.textContent = `Lv ${level}`;
+  xpNow.textContent = `${currentXP} XP`;
+  xpNext.textContent = `/ ${xpNeeded} to next`;
+  xpBarFill.style.width = `${(currentXP/xpNeeded)*100}%`;
+  streakBadge.textContent = `🔥 ${student.streak || 0} Streak`;
 }
 
 function renderTaskList(student){
-  const tasks=[...student.tasks].sort((a,b)=>b.createdAt-a.createdAt);
   taskListEl.innerHTML="";
-  tasks.forEach(task=>{
-    const row = el("div"); row.className="task-item";
-
-    const left = el("div"); left.className="task-left";
-    const title = el("div"); title.className="task-title"; title.textContent=task.name;
-    const meta  = el("div"); meta.className="task-meta"; meta.textContent=`${task.xp} XP`;
-    const status= el("span"); status.className="status "+(task.status==="Done"?"done":"progress"); status.textContent=task.status;
-    left.append(status,title,meta);
-
-    const btns = el("div"); btns.className="btn-row";
-    if(task.status!=="Done"){
-      const doneBtn = button("Done","primary");
-      doneBtn.onclick=async ()=>{
-        // Mark done and apply xp
-        // Only apply daily bonus once per day (if not already checked today)
-        const now = Date.now();
-        const didCheckToday = isSameDay(student.lastCheckin, now);
-        if(!didCheckToday){
-          // increment streak or reset if lastCheckin was more than 1 day ago
-          if(isSameDay(student.lastCheckin, yesterdayTimestamp(now))){
-            student.streak = (student.streak || 0) + 1;
-          } else {
-            // if lastCheckin not yesterday and not today, reset streak to 1
-            student.streak = 1;
-          }
-          student.lastCheckin = now;
-          student.totalXP += Number(DAILY_BONUS_XP || 0);
-        }
-        // give task xp
-        task.status="Done";
-        student.totalXP += Number(task.xp);
-        await saveStudent(student);
-        renderTaskList(student);
-        renderStudentStats(student);
-        await refreshAll();
-      };
-      btns.appendChild(doneBtn);
-    }
-    const delBtn = button("Delete","danger");
-    delBtn.onclick=async ()=>{
-      const idx = student.tasks.findIndex(t=>t.id===task.id);
-      if(idx>=0){ student.tasks.splice(idx,1); await saveStudent(student); renderTaskList(student); await refreshAll(); }
-    };
-    btns.appendChild(delBtn);
-
-    row.append(left,btns);
-    taskListEl.appendChild(row);
+  student.tasks.forEach(t=>{
+    const div = document.createElement("div");
+    div.className="task-item";
+    div.innerHTML = `
+      <div><strong>${t.name}</strong> <span class="muted">${t.xp} XP</span></div>
+      <div>
+        ${t.status!=="Done" ? `<button class="btn primary" onclick="markDone('${student.id}','${t.id}')">Done</button>` : `<span class="status done">Done</span>`}
+        <button class="btn danger" onclick="deleteTask('${student.id}','${t.id}')">Del</button>
+      </div>`;
+    taskListEl.appendChild(div);
   });
 }
 
-/* ---------------- Views ---------------- */
-function openStudentsView(){ studentsView.classList.add("active"); studentView.classList.remove("active"); renderStudentsTable(); }
-async function openStudentView(id){
-  activeStudentId=id;
-  const student = students.find(s=>s.id===id);
-  if(!student) return;
-  studentNameInput.value=student.name;
-  studentNameInput.onchange=async ()=>{ student.name=studentNameInput.value.trim()||"Untitled"; await saveStudent(student); renderStudentsTable(); };
-  renderStudentStats(student); renderTaskList(student);
-  studentsView.classList.remove("active"); studentView.classList.add("active");
-}
-
-/* ---------------- Events ---------------- */
-addStudentBtn.onclick=async ()=>{
-  const s = makeStudent(`Player ${students.length+1}`);
+/* ---------------- Actions ---------------- */
+window.updateName = async (id, name)=>{
+  const s = students.find(st=>st.id===id);
+  if(!s) return;
+  s.name=name.trim();
   await saveStudent(s);
-  students.push(s);
+};
+
+window.deleteStudent = async (id)=>{
+  if(!confirm("Delete this player?")) return;
+  await db.collection("students").doc(id).delete();
+};
+
+window.openStudentView = (id)=>{
+  activeStudentId=id;
+  const s = students.find(st=>st.id===id);
+  studentNameInput.value = s.name;
+  renderStudentStats(s);
+  renderTaskList(s);
+  studentsView.classList.remove("active");
+  studentView.classList.add("active");
+};
+
+backBtn.onclick=()=>{ 
+  studentView.classList.remove("active");
+  studentsView.classList.add("active");
   renderStudentsTable();
 };
 
-backBtn.onclick=()=>{ openStudentsView(); };
+addStudentBtn.onclick=async ()=>{
+  const s = makeStudent(`Player ${students.length+1}`);
+  await saveStudent(s);
+};
 
 addTaskBtn.onclick=async ()=>{
-  const student = students.find(s=>s.id===activeStudentId);
-  if(!student) return;
-  const name = (taskNameInput.value||"").trim();
+  const s = students.find(st=>st.id===activeStudentId);
+  if(!s) return;
+  const name = taskNameInput.value.trim();
   const xp = Number(taskXPInput.value||0);
   if(!name||xp<=0) return;
-  student.tasks.unshift({ id: cryptoRandomId(), name, xp, status:"In Progress", createdAt:Date.now() });
-  taskNameInput.value=""; taskXPInput.value="";
-  await saveStudent(student); renderTaskList(student); renderStudentStats(student); await refreshAll();
+  const task = {id:cryptoRandomId(),name,xp,status:"In Progress",createdAt:Date.now()};
+  s.tasks.push(task);
+  await saveStudent(s);
+  renderTaskList(s);
 };
 
-checkinBtn.onclick=async ()=>{
-  const student = students.find(s=>s.id===activeStudentId);
-  if(!student) return;
-  const now = Date.now();
-  const didCheckToday = isSameDay(student.lastCheckin, now);
-  if(didCheckToday){
-    alert("Already checked in today.");
-    return;
-  }
+window.markDone = async (sid,tid)=>{
+  const s = students.find(st=>st.id===sid);
+  const t = s.tasks.find(tt=>tt.id===tid);
+  if(!t) return;
+  t.status="Done";
+  s.totalXP += t.xp;
 
-  // If lastCheckin was yesterday, increment streak, else reset to 1
-  if(isSameDay(student.lastCheckin, yesterdayTimestamp(now))){
-    student.streak = (student.streak || 0) + 1;
-  } else {
-    student.streak = 1;
+  const last = s.lastActive ? new Date(s.lastActive).toDateString() : null;
+  const today = todayStr();
+  if(last !== today){
+    s.streak = (last && (new Date(today) - new Date(last)) <= 86400000) ? (s.streak||0)+1 : 1;
+    s.lastActive = new Date().toISOString();
   }
-  student.lastCheckin = now;
-  student.totalXP += Number(DAILY_BONUS_XP || 0);
-  await saveStudent(student);
-  renderStudentStats(student);
-  await refreshAll();
+  await saveStudent(s);
+  renderTaskList(s);
+  renderStudentStats(s);
 };
 
-/* ---------------- Chat Functions ---------------- */
+window.deleteTask = async (sid,tid)=>{
+  const s = students.find(st=>st.id===sid);
+  s.tasks = s.tasks.filter(tt=>tt.id!==tid);
+  await saveStudent(s);
+  renderTaskList(s);
+};
+
+/* ---------------- Chat ---------------- */
 sendChatBtn.onclick=async ()=>{
   const msg = chatInput.value.trim();
   if(!msg) return;
-  await db.collection("chat").add({ text: msg, timestamp: Date.now() });
+  await db.collection("chat").add({text:msg,timestamp:Date.now()});
   chatInput.value="";
 };
-function renderChat(docs){
+function renderChat(snapshot){
   chatBox.innerHTML="";
-  docs.forEach(doc=>{
-    const data = doc.data();
-    const div = el("div", text(data.text));
+  snapshot.forEach(doc=>{
+    const d = doc.data();
+    const div = document.createElement("div");
     div.className="chat-msg";
+    div.textContent = d.text;
     chatBox.appendChild(div);
   });
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-/* ---------------- Helpers ---------------- */
-async function refreshAll(){
-  // reload students from local array (already updated) and re-render table
-  // If you want to re-query from server, you can, but here we re-render from current students state.
-  renderStudentsTable();
-}
-
 /* ---------------- Init ---------------- */
 async function init(){
   try {
-    students = await loadStudents();
+    const snapshot = await db.collection("students").get();
+    students = snapshot.docs.map(d=>d.data());
   } catch(err){
-    console.error("Failed to load students:", err);
-    students = [];
+    console.error(err);
   } finally {
-    hideLoading();
+    loadingScreen.style.display="none";
   }
 
   renderStudentsTable();
 
-  try {
-    // Realtime students updates
-    db.collection("students").onSnapshot(snapshot=>{
-      students = snapshot.docs.map(d=>d.data());
-      if(!activeStudentId) renderStudentsTable();
-      else{
-        const student = students.find(s=>s.id===activeStudentId);
-        if(student){ renderStudentStats(student); renderTaskList(student); }
-      }
-    });
+  db.collection("students").onSnapshot(snap=>{
+    students = snap.docs.map(d=>d.data());
+    if(studentView.classList.contains("active")){
+      const s = students.find(st=>st.id===activeStudentId);
+      if(s){ renderStudentStats(s); renderTaskList(s); }
+    } else renderStudentsTable();
+  });
 
-    // Realtime chat updates
-    db.collection("chat").orderBy("timestamp").onSnapshot(renderChat);
-  } catch(err){
-    console.error("Realtime Firestore failed:", err);
-  }
+  db.collection("chat").orderBy("timestamp").onSnapshot(renderChat);
 }
 init();
